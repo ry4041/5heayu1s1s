@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Little Space</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f5f3f0;
+      font-family: -apple-system, sans-serif;
+      color: #393633;
+    }
+    .card {
+      width: 82%;
+      max-width: 380px;
+      padding: 36px 24px;
+      box-sizing: border-box;
+      text-align: center;
+      background: white;
+      border-radius: 22px;
+      box-shadow: 0 8px 30px #0000000d;
+    }
+    h1 { font-size: 25px; }
+    p { color: #999; font-size: 14px; }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px;
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #393633;
+      color: white;
+      font-size: 16px;
+    }
+    #message { margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Our Little Space</h1>
+    <p>A little corner of the world, just for us.</p>
+    <input id="password" type="password" placeholder="Enter the password">
+    <button onclick="unlock()">Enter</button>
+    <p id="message"></p>
+  </main>
+
+  <script>
+    function unlock() {
+      document.getElementById("message").textContent =
+        "Welcome to our little space.";
+    }
+  </script>
+</body>
+</html>

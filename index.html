@@ -1,67 +1,139 @@
+
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Our Little Space</title>
+  <title>ふたりだけの小さな場所</title>
+
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #f5f3f0;
-      font-family: -apple-system, sans-serif;
-      color: #393633;
+      background: #f3f2ef;
+      font-family: -apple-system, BlinkMacSystemFont,
+        "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      color: #55514e;
     }
+
     .card {
-      width: 82%;
+      width: 84%;
       max-width: 380px;
-      padding: 36px 24px;
-      box-sizing: border-box;
+      padding: 42px 26px;
       text-align: center;
-      background: white;
-      border-radius: 22px;
-      box-shadow: 0 8px 30px #0000000d;
+      background: #fff;
+      border-radius: 28px;
+      box-shadow: 0 10px 35px #0000000a;
     }
-    h1 { font-size: 25px; }
-    p { color: #999; font-size: 14px; }
+
+    .flower {
+      font-size: 25px;
+      color: #d8c9c9;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 23px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      line-height: 1.6;
+    }
+
+    .subtitle {
+      color: #aaa5a2;
+      font-size: 13px;
+      letter-spacing: 1px;
+      margin: 14px 0 28px;
+    }
+
     input {
       width: 100%;
-      box-sizing: border-box;
-      padding: 13px;
-      margin-top: 20px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      font-size: 16px;
+      padding: 15px;
+      border: 1px solid #e5e2df;
+      border-radius: 13px;
+      background: #faf9f8;
+      font-size: 15px;
+      outline: none;
     }
+
+    input:focus {
+      border-color: #c9bfc0;
+    }
+
+    input::placeholder {
+      color: #c2bfbc;
+    }
+
     button {
       width: 100%;
-      padding: 13px;
-      margin-top: 14px;
-      border: 0;
-      border-radius: 10px;
-      background: #393633;
+      padding: 14px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 13px;
+      background: #77716e;
       color: white;
-      font-size: 16px;
+      font-size: 15px;
+      letter-spacing: 2px;
     }
-    #message { margin-top: 18px; }
+
+    #message {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #a99b9b;
+      min-height: 20px;
+    }
+
+    .footer {
+      margin-top: 25px;
+      font-size: 11px;
+      color: #c9c5c1;
+      letter-spacing: 2px;
+    }
   </style>
 </head>
+
 <body>
   <main class="card">
-    <h1>Our Little Space</h1>
-    <p>A little corner of the world, just for us.</p>
-    <input id="password" type="password" placeholder="Enter the password">
-    <button onclick="unlock()">Enter</button>
+    <div class="flower">୨୧</div>
+
+    <h1>ふたりだけの小さな場所</h1>
+
+    <p class="subtitle">
+      ここは、ふたりだけの秘密。
+    </p>
+
+    <input
+      id="password"
+      type="password"
+      placeholder="合言葉を入力してください"
+    >
+
+    <button onclick="unlock()">入る</button>
+
     <p id="message"></p>
+
+    <div class="footer">WITH LOVE, ALWAYS</div>
   </main>
 
   <script>
     function unlock() {
-      document.getElementById("message").textContent =
-        "Welcome to our little space.";
+      const password =
+        document.getElementById("password").value;
+
+      if (password === "1231") {
+        document.getElementById("message").textContent =
+          "おかえりなさい。待っていたよ。";
+      } else {
+        document.getElementById("message").textContent =
+          "合言葉が違うみたいです。";
+      }
     }
   </script>
 </body>

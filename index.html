@@ -1,221 +1,619 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Our Little Space</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#eef1f3">
+<title>Our Little Space</title>
+<style>
+:root {
+  --bg: #f0f2f3;
+  --ink: #454b50;
+  --muted: #a3a9ae;
+  --line: rgba(255,255,255,.85);
+  --glass: rgba(255,255,255,.58);
+  --blue: #dce5eb;
+  --silver: #e7eaec;
+  --shadow: 0 10px 35px rgba(104,117,128,.10), inset 0 1px 1px rgba(255,255,255,.95);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(ellipse at 10% 5%, rgba(255,255,255,.95), transparent 42%),
+    radial-gradient(ellipse at 90% 25%, rgba(211,224,233,.55), transparent 38%),
+    linear-gradient(145deg,#f7f8f8,#e9edef 55%,#f5f6f6);
+  min-height: 100vh;
+}
+button, input, textarea { font: inherit; }
+button { color: inherit; cursor: pointer; }
+#app { min-height: 100vh; max-width: 600px; margin: auto; position: relative; }
+.page { display:none; min-height:100vh; padding: 22px 20px 105px; animation: fade .22s ease; }
+.page.active { display:block; }
+@keyframes fade { from {opacity:.4; transform:translateY(5px)} to {opacity:1; transform:none} }
+.glass {
+  background: var(--glass);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+.symbol { color:#aab8c2; letter-spacing:3px; }
+.topline { display:flex; align-items:center; justify-content:space-between; margin: 12px 2px 22px; }
+.topline h2 { margin:0; font-size:23px; font-weight:600; letter-spacing:.5px; }
+.small-muted { color:var(--muted); font-size:12px; }
+.icon-btn {
+  border:0; background:rgba(255,255,255,.65); border-radius:50%;
+  width:38px; height:38px; box-shadow:var(--shadow); font-size:18px;
+}
+.music {
+  border-radius:25px; padding:17px 18px 15px; margin:8px 0 24px;
+  position:relative; overflow:hidden;
+}
+.music:before {
+  content:""; position:absolute; inset:-35%;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.65) 48%,transparent 61%);
+  transform:translateX(-35%); animation:shine 8s infinite linear; pointer-events:none;
+}
+@keyframes shine { to { transform:translateX(45%); } }
+.music-head { display:flex; align-items:center; gap:12px; position:relative; }
+.album {
+  width:55px; height:55px; border-radius:17px;
+  background:linear-gradient(140deg,#dfe7ec,#fff 48%,#cbd6dd);
+  display:grid; place-items:center; font-size:24px;
+  box-shadow:inset 0 1px 5px white, 0 5px 15px #aab5bd44;
+}
+.music-info { flex:1; min-width:0; }
+.music-info strong { display:block; font-size:15px; }
+.music-info span { color:var(--muted); font-size:12px; display:block; margin-top:5px; }
+.music-edit { border:0; background:transparent; font-size:17px; color:#9ba9b2; }
+.lyric { margin:16px 0 13px; font-size:14px; color:#737d84; text-align:center; letter-spacing:.5px; }
+.progress { width:100%; accent-color:#9eabb5; height:3px; }
+.music-controls { display:flex; justify-content:center; align-items:center; gap:27px; margin-top:8px; color:#929da5; }
+.music-controls button { border:0; background:transparent; font-size:19px; }
+.music-controls .play { font-size:23px; color:#59636b; }
+.search {
+  display:flex; align-items:center; gap:9px; padding:11px 15px;
+  border-radius:30px; margin-bottom:18px;
+}
+.search input { border:0; outline:0; background:transparent; width:100%; color:var(--ink); font-size:14px; }
+.search input::placeholder { color:#b0b5b9; }
+.section-label { color:#a5adb2; font-size:12px; letter-spacing:2px; margin:19px 5px 10px; }
+.contact-card {
+  border-radius:19px; padding:13px 14px; margin:9px 0;
+  display:flex; align-items:center; gap:12px; position:relative;
+}
+.avatar {
+  width:48px; height:48px; border-radius:50%; flex-shrink:0;
+  display:grid; place-items:center; font-size:22px;
+  background:linear-gradient(145deg,#dce4e9,#fff 55%,#cbd5dc);
+  border:2px solid rgba(255,255,255,.9);
+  box-shadow:0 3px 10px #9baab222;
+}
+.contact-main { flex:1; min-width:0; }
+.contact-main strong { display:block; font-size:15px; font-weight:600; }
+.contact-main span { display:block; color:#a1a9ae; font-size:12px; margin-top:5px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.contact-time { font-size:10px; color:#b4bbc0; align-self:flex-start; }
+.pin-mark { color:#9aabb7; font-size:12px; }
+.empty { text-align:center; color:#adb5ba; padding:35px 10px; font-size:13px; }
+.nav {
+  position:fixed; z-index:20; bottom:0; left:50%; transform:translateX(-50%);
+  width:min(100%,600px); padding:12px 8px calc(12px + env(safe-area-inset-bottom));
+  display:flex; justify-content:space-around;
+  border-radius:23px 23px 0 0; background:rgba(248,249,249,.78);
+  border-top:1px solid white; backdrop-filter:blur(25px);
+}
+.nav button { border:0; background:transparent; color:#aab1b6; font-size:11px; display:flex; flex-direction:column; align-items:center; gap:5px; min-width:62px; }
+.nav button b { font-size:22px; font-weight:400; }
+.nav button.active { color:#4f5960; }
+.nav button.active b { text-shadow:0 2px 8px #aab9c555; }
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+/* 联系人 */
+.contact-tools { display:flex; justify-content:space-between; align-items:center; margin:5px 2px 14px; }
+.contact-tools button { border:0; background:transparent; color:#89969e; font-size:13px; }
+.add-contact {
+  border:1px solid white; background:rgba(255,255,255,.6);
+  border-radius:18px; padding:14px; margin-top:12px; width:100%;
+}
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #f5f3f1;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      color: #494541;
-      padding: 20px;
-    }
+/* 动态 */
+.post-card { padding:16px; border-radius:22px; margin:13px 0; }
+.post-user { display:flex; align-items:center; gap:10px; }
+.post-user .avatar { width:40px; height:40px; }
+.post-user strong { font-size:14px; }
+.post-text { line-height:1.8; font-size:14px; margin:14px 0; white-space:pre-wrap; }
+.post-actions { display:flex; gap:22px; color:#9ca7ae; font-size:12px; }
+.post-actions button { border:0; background:transparent; color:inherit; }
 
-    .card {
-      width: 100%;
-      max-width: 390px;
-      padding: 42px 28px;
-      text-align: center;
-      background: #fff;
-      border-radius: 28px;
-      box-shadow: 0 12px 35px #0000000c;
-    }
+/* 我的 */
+.profile-card { border-radius:25px; padding:22px; text-align:center; margin:10px 0 18px; }
+.profile-avatar { width:76px; height:76px; margin:auto auto 12px; font-size:32px; }
+.profile-card h3 { margin:4px 0; }
+.profile-card p { color:#a2abb1; font-size:12px; }
+.wallet-card {
+  border-radius:25px; padding:22px; text-align:center; margin:14px 0;
+  background:linear-gradient(145deg,rgba(255,255,255,.8),rgba(222,231,237,.65));
+}
+.wallet-card .currency { font-size:13px; color:#9aa6ad; letter-spacing:2px; }
+.balance { font-size:34px; font-weight:650; margin:12px 0 17px; color:#3d4850; }
+.primary-btn {
+  border:0; border-radius:22px; padding:11px 24px;
+  background:#657681; color:white; box-shadow:0 5px 15px #81909a33;
+}
+.secondary-btn { border:1px solid white; background:rgba(255,255,255,.7); border-radius:22px; padding:10px 20px; }
+.menu-row { border-radius:17px; padding:17px; margin:9px 0; display:flex; justify-content:space-between; align-items:center; font-size:14px; }
 
-    .flower {
-      font-size: 34px;
-      color: #d8aebd;
-      margin-bottom: 12px;
-    }
+/* 全屏聊天 */
+#chatScreen {
+  display:none; position:fixed; inset:0; z-index:40; max-width:600px; margin:auto;
+  background:linear-gradient(150deg,#f5f6f6,#e9edef 65%,#f5f6f6);
+  flex-direction:column; padding-top:env(safe-area-inset-top);
+}
+#chatScreen.open { display:flex; }
+.chat-header {
+  display:flex; align-items:center; gap:12px; padding:13px 16px;
+  background:rgba(255,255,255,.72); border-bottom:1px solid white;
+  backdrop-filter:blur(20px);
+}
+.chat-header .avatar { width:40px; height:40px; }
+.chat-title { flex:1; }
+.chat-title strong { display:block; font-size:15px; }
+.chat-title span { display:block; font-size:11px; color:#a4adb3; margin-top:4px; }
+.chat-header button { border:0; background:transparent; font-size:19px; color:#87939a; }
+.chat-messages {
+  flex:1; overflow-y:auto; padding:17px 13px 22px;
+  display:flex; flex-direction:column; gap:13px;
+}
+.date-divider { align-self:center; font-size:10px; color:#aeb6bb; background:#ffffff91; border-radius:15px; padding:5px 12px; }
+.message { max-width:82%; display:flex; flex-direction:column; gap:5px; }
+.message.mine { align-self:flex-end; align-items:flex-end; }
+.message.theirs { align-self:flex-start; align-items:flex-start; }
+.bubble {
+  padding:11px 14px; border-radius:17px; font-size:14px; line-height:1.65;
+  background:rgba(255,255,255,.85); border:1px solid rgba(255,255,255,.95);
+  box-shadow:0 4px 12px #8797a111; white-space:pre-wrap; overflow-wrap:anywhere;
+}
+.mine .bubble { background:rgba(215,225,232,.88); }
+.quote-preview {
+  border-left:3px solid #9eafb9; padding:5px 9px; margin-bottom:6px;
+  color:#8b989f; font-size:11px; background:#e9eef1aa; border-radius:4px;
+}
+.message-meta { color:#aab2b7; font-size:10px; display:flex; gap:9px; align-items:center; }
+.message-meta button { border:0; background:transparent; color:#9aa7af; padding:0; font-size:10px; }
+.transfer-bubble {
+  width:220px; padding:15px; border-radius:17px;
+  background:linear-gradient(140deg,#e5edf1,#f9fbfb);
+  border:1px solid white; box-shadow:var(--shadow);
+}
+.transfer-bubble strong { display:block; font-size:23px; margin:7px 0; }
+.transfer-bubble span { font-size:11px; color:#9aa6ad; }
+.reply-bar { display:none; padding:9px 15px; background:#e6ecef; font-size:12px; color:#78858d; }
+.reply-bar.show { display:flex; justify-content:space-between; }
+.reply-bar button { border:0; background:transparent; }
+.chat-composer {
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.8); border-top:1px solid white;
+}
+.composer-row { display:flex; align-items:center; gap:8px; }
+.composer-row input {
+  flex:1; min-width:0; border:1px solid white; outline:0;
+  border-radius:22px; padding:12px 15px; background:#f1f3f4;
+}
+.composer-row button { border:0; background:transparent; font-size:20px; color:#89969e; }
+.composer-row .send { background:#778994; color:white; border-radius:50%; width:38px; height:38px; font-size:16px; }
+.composer-tools { display:flex; gap:22px; padding:9px 8px 0; color:#9ba6ad; }
+.composer-tools button { border:0; background:transparent; font-size:18px; }
 
-    h1 {
-      font-size: 27px;
-      margin: 8px 0 12px;
-      letter-spacing: -0.5px;
-    }
-
-    .subtitle {
-      color: #aaa3a0;
-      font-size: 14px;
-      line-height: 1.7;
-      margin-bottom: 28px;
-    }
-
-    input {
-      width: 100%;
-      padding: 15px;
-      border: 1px solid #e7e2df;
-      border-radius: 14px;
-      background: #faf9f8;
-      font-size: 16px;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #d9bfc1;
-    }
-
-    button {
-      width: 100%;
-      padding: 15px;
-      margin-top: 14px;
-      border: none;
-      border-radius: 14px;
-      background: #494541;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:active {
-      opacity: 0.85;
-    }
-
-    #message {
-      margin-top: 20px;
-      color: #c49b9f;
-      font-size: 14px;
-    }
-
-    .footer {
-      margin-top: 30px;
-      color: #c5bfbb;
-      font-size: 11px;
-      letter-spacing: 2px;
-    }
-  </style>
+/* 弹窗 */
+.modal {
+  display:none; position:fixed; inset:0; z-index:60;
+  background:rgba(65,75,82,.23); backdrop-filter:blur(7px);
+  align-items:center; justify-content:center; padding:22px;
+}
+.modal.show { display:flex; }
+.modal-card {
+  width:100%; max-width:390px; padding:22px; border-radius:25px;
+  background:rgba(250,251,251,.94); border:1px solid white;
+  box-shadow:0 18px 55px #53616c30;
+}
+.modal-card h3 { margin:0 0 16px; font-size:18px; }
+.modal-card input, .modal-card textarea {
+  width:100%; border:1px solid #e5e9eb; background:#f5f7f7;
+  border-radius:13px; padding:12px; outline:0; margin:7px 0;
+}
+.modal-card textarea { min-height:85px; resize:vertical; }
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:15px; }
+.modal-actions button { padding:10px 17px; border-radius:20px; border:0; }
+.modal-actions .confirm { background:#667985; color:white; }
+.toast {
+  position:fixed; z-index:90; bottom:100px; left:50%; transform:translateX(-50%);
+  background:#56636bdc; color:white; padding:10px 18px; border-radius:20px;
+  font-size:12px; opacity:0; pointer-events:none; transition:.2s;
+}
+.toast.show { opacity:1; }
+</style>
 </head>
-
 <body>
-  <main class="card">
-    <div class="flower">♡</div>
+<div id="app">
 
-    <h1>Our Little Space</h1>
+<!-- 聊天主页 -->
+<section id="homePage" class="page active">
+  <div class="topline">
+    <span class="symbol">♡ ⁺ ˚</span>
+    <span class="symbol">⁺₊⋆ 𐙚 ⋆₊⁺</span>
+  </div>
 
-    <p class="subtitle">
-      A little corner of the world,<br>
-      just for us.
-    </p>
+  <div class="music glass">
+    <div class="music-head">
+      <div class="album">♫</div>
+      <div class="music-info">
+        <strong id="songTitle">后会无期</strong>
+        <span id="songArtist">i luv u &lt;3</span>
+      </div>
+      <button class="music-edit" onclick="editMusic()">⋯</button>
+    </div>
+    <div class="lyric" id="songLyric">等不到 你的雪月风花 我们的爱也有时差</div>
+    <input class="progress" type="range" min="0" max="100" value="38">
+    <div class="music-controls">
+      <button onclick="toast('已切换上一首')">⇆</button>
+      <button onclick="toast('上一首')">◁</button>
+      <button class="play" id="playBtn" onclick="togglePlay()">❚❚</button>
+      <button onclick="toast('下一首')">▷</button>
+      <button onclick="toast('循环播放')">↻</button>
+    </div>
+  </div>
 
-    <input
-      id="password"
-      type="password"
-      placeholder="Enter the password"
-    >
+  <div class="search glass">
+    <span>⌕</span>
+    <input id="homeSearch" placeholder="搜索联系人..." oninput="renderContacts('homeList',this.value)">
+    <span class="symbol">♡</span>
+  </div>
 
-    <button onclick="unlock()">Enter</button>
+  <div class="section-label">⁺₊ PINNED CONTACTS</div>
+  <div id="homePinned"></div>
+  <div class="section-label">♡ CONTACTS</div>
+  <div id="homeList"></div>
+</section>
 
-    <p id="message"></p>
+<!-- 联系人页面 -->
+<section id="contactsPage" class="page">
+  <div class="topline"><h2>Contacts</h2><span class="symbol">♡ ⁺ ˚</span></div>
+  <div class="search glass">
+    <span>⌕</span><input id="contactSearch" placeholder="搜索联系人..." oninput="renderContacts('contactsList',this.value)">
+  </div>
+  <div class="contact-tools">
+    <span class="small-muted">MY LITTLE WORLD</span>
+    <button onclick="addContact()">＋ 添加联系人</button>
+  </div>
+  <div id="contactsList"></div>
+</section>
 
-    <div class="footer">MADE WITH LOVE ♡</div>
-  </main>
+<!-- 动态页面 -->
+<section id="discoverPage" class="page">
+  <div class="topline"><h2>Discover</h2><span class="symbol">₊˚ ♡</span></div>
+  <div class="post-card glass">
+    <div class="post-user"><div class="avatar">♡</div><div><strong>Our Little Space</strong><div class="small-muted">Share a little moment</div></div></div>
+    <textarea id="postInput" placeholder="记录一点此刻的心情..." style="width:100%;margin:15px 0;border:1px solid white;border-radius:15px;padding:13px;background:#ffffff9c;outline:0;min-height:85px"></textarea>
+    <button class="primary-btn" onclick="publishPost()">发布动态</button>
+  </div>
+  <div id="postList"></div>
+</section>
 
+<!-- 我的页面 -->
+<section id="mePage" class="page">
+  <div class="topline"><h2>Me</h2><span class="symbol">♡ 𐙚</span></div>
+  <div class="profile-card glass">
+    <div class="avatar profile-avatar">♡</div>
+    <h3>Our Little Space</h3>
+    <p>just a little world for two · ♡</p>
+    <button class="secondary-btn" onclick="editProfile()">编辑个人资料</button>
+  </div>
+  <div class="wallet-card glass">
+    <div class="currency">MY LITTLE WALLET · USD</div>
+    <div class="balance" id="balance">$520.00</div>
+    <button class="primary-btn" onclick="openWallet()">Open Wallet</button>
+  </div>
+  <div class="menu-row glass" onclick="openWallet()"><span>♡ Virtual Wallet</span><span>›</span></div>
+  <div class="menu-row glass" onclick="editMusic()"><span>♫ Music Settings</span><span>›</span></div>
+  <div class="menu-row glass" onclick="toast('这是只属于我们的小空间')"><span>⁺₊ About Us</span><span>›</span></div>
+  <p class="small-muted" style="text-align:center;margin-top:25px">made with love ♡</p>
+</section>
+
+<nav class="nav">
+  <button class="active" data-page="homePage" onclick="switchPage(this)"><b>▢</b>Chats</button>
+  <button data-page="contactsPage" onclick="switchPage(this)"><b>♧</b>Contacts</button>
+  <button data-page="discoverPage" onclick="switchPage(this)"><b>⌑</b>Discover</button>
+  <button data-page="mePage" onclick="switchPage(this)"><b>⚙</b>Me</button>
+</nav>
+</div>
+
+<!-- 全屏聊天 -->
+<div id="chatScreen">
+  <div class="chat-header">
+    <button onclick="closeChat()">‹</button>
+    <div class="avatar" id="chatAvatar">♡</div>
+    <div class="chat-title"><strong id="chatName">联系人</strong><span id="chatStatus">♡ always here</span></div>
+    <button onclick="contactOptions()">···</button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="reply-bar" id="replyBar">
+    <span id="replyText">引用消息</span><button onclick="cancelReply()">✕</button>
+  </div>
+  <div class="chat-composer">
+    <div class="composer-row">
+      <button onclick="sendQuickSymbol()">＋</button>
+      <input id="messageInput" placeholder="请输入..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button onclick="openTransfer()">＄</button>
+      <button class="send" onclick="sendMessage()">↑</button>
+    </div>
+    <div class="composer-tools">
+      <button onclick="sendQuickSymbol()">♡</button>
+      <button onclick="toast('图片功能可以之后继续添加')">▧</button>
+      <button onclick="toast('给你一个抱抱')">☺</button>
+      <button onclick="openTransfer()">＄</button>
+      <span class="symbol">⁺₊⋆</span>
+    </div>
+  </div>
+</div>
+
+<!-- 通用弹窗 -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-card" id="modalContent"></div>
+</div>
+<div class="toast" id="toast"></div>
 
 <script>
-const STORAGE_KEY = "our-little-space-v1";
+const STORAGE = "our_little_space_v3";
+const defaultData = {
+  contacts: [
+    {id:1,name:"阿屿",remark:"阿屿",avatar:"♡",pinned:true,status:"两颗星需要多久才能靠近、🩶🤍",messages:[
+      {mine:false,text:"你来啦。",time:"刚刚"},
+      {mine:true,text:"想你了。",time:"刚刚"},
+      {mine:false,text:"我也想你。♡",time:"刚刚"}
+    ]},
+    {id:2,name:"Yiiu7i",remark:"Yiiu7i",avatar:"🐻",pinned:false,status:"暂无消息",messages:[]},
+    {id:3,name:"n>ᴗ<n",remark:"n>ᴗ<n",avatar:"🐰",pinned:false,status:"暂无消息",messages:[]}
+  ],
+  posts: [],
+  balance:520,
+  transactions:[],
+  song:{title:"后会无期",artist:"i luv u <3",lyric:"等不到 你的雪月风花 我们的爱也有时差"}
+};
+let data;
+try { data = JSON.parse(localStorage.getItem(STORAGE)) || defaultData; }
+catch(e) { data = defaultData; }
+let currentContact = null;
+let replyTarget = null;
 
-function toBase64(bytes) {
-  return btoa(String.fromCharCode(...bytes));
+function save(){
+  localStorage.setItem(STORAGE,JSON.stringify(data));
+  updateBalance();
 }
-
-function fromBase64(text) {
-  return Uint8Array.from(atob(text), c => c.charCodeAt(0));
+function updateBalance(){
+  document.getElementById("balance").textContent="$"+Number(data.balance).toFixed(2);
 }
-
-async function makeKey(password, salt) {
-  const encoder = new TextEncoder();
-  const material = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-
-  return crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt,
-      iterations: 310000,
-      hash: "SHA-256"
-    },
-    material,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
+function toast(msg){
+  const el=document.getElementById("toast");
+  el.textContent=msg; el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"),1800);
 }
-
-async function unlock() {
-  const input = document.getElementById("password");
-  const message = document.getElementById("message");
-  const password = input.value;
-
-  if (!password) {
-    message.textContent = "Please enter a password.";
+function switchPage(btn){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById(btn.dataset.page).classList.add("active");
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderAll();
+}
+function renderAll(){
+  renderContacts("homePinned");
+  renderContacts("homeList");
+  renderContacts("contactsList");
+  renderPosts();
+  updateBalance();
+  document.getElementById("songTitle").textContent=data.song.title;
+  document.getElementById("songArtist").textContent=data.song.artist;
+  document.getElementById("songLyric").textContent=data.song.lyric;
+}
+function contactCard(c){
+  return `<div class="contact-card glass" onclick="openChat(${c.id})">
+    <div class="avatar">${escapeHTML(c.avatar)}</div>
+    <div class="contact-main"><strong>${escapeHTML(c.remark||c.name)}</strong><span>${escapeHTML(c.status||"暂无消息")}</span></div>
+    <div class="contact-time">${c.pinned?'<span class="pin-mark">⌖ PIN</span>':'♡'}</div>
+  </div>`;
+}
+function renderContacts(target,query=""){
+  const el=document.getElementById(target);
+  if(!el)return;
+  let list=data.contacts.filter(c=>(c.remark+c.name+c.status).toLowerCase().includes(query.toLowerCase()));
+  if(target==="homePinned") list=list.filter(c=>c.pinned);
+  if(target==="homeList") list=list.filter(c=>!c.pinned);
+  if(target==="contactsList") list.sort((a,b)=>Number(b.pinned)-Number(a.pinned));
+  el.innerHTML=list.length?list.map(contactCard).join():'<div class="empty">♡ 暂时没有联系人 ♡</div>';
+}
+function openChat(id){
+  currentContact=data.contacts.find(c=>c.id===id);
+  if(!currentContact)return;
+  document.getElementById("chatName").textContent=currentContact.remark||currentContact.name;
+  document.getElementById("chatAvatar").textContent=currentContact.avatar;
+  document.getElementById("chatStatus").textContent=currentContact.status||"♡ always here";
+  document.getElementById("chatScreen").classList.add("open");
+  renderMessages();
+}
+function closeChat(){
+  document.getElementById("chatScreen").classList.remove("open");
+  currentContact=null; cancelReply(); renderAll();
+}
+function renderMessages(){
+  const box=document.getElementById("chatMessages");
+  if(!currentContact)return;
+  if(!currentContact.messages.length){
+    box.innerHTML='<div class="date-divider">♡ Today ♡</div><div class="empty">这里还没有消息，发一句给对方吧。</div>';
     return;
   }
-
-  try {
-    let saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const key = await makeKey(password, salt);
-
-      const data = new TextEncoder().encode(
-        "Welcome to our little space. ♡"
-      );
-
-      const encrypted = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
-        key,
-        data
-      );
-
-      saved = JSON.stringify({
-        salt: toBase64(salt),
-        iv: toBase64(iv),
-        data: toBase64(new Uint8Array(encrypted))
-      });
-
-      localStorage.setItem(STORAGE_KEY, saved);
-      message.textContent = "Your little space is ready. ♡";
-    } else {
-      const record = JSON.parse(saved);
-      const key = await makeKey(
-        password,
-        fromBase64(record.salt)
-      );
-
-      const decrypted = await crypto.subtle.decrypt(
-        {
-          name: "AES-GCM",
-          iv: fromBase64(record.iv)
-        },
-        key,
-        fromBase64(record.data)
-      );
-
-      message.textContent = new TextDecoder().decode(decrypted);
+  box.innerHTML='<div class="date-divider">♡ Today ♡</div>'+currentContact.messages.map((m,i)=>{
+    if(m.transfer){
+      return `<div class="message ${m.mine?'mine':'theirs'}"><div class="transfer-bubble"><span>${m.mine?'VIRTUAL TRANSFER':'RECEIVED'}</span><strong>$${Number(m.amount).toFixed(2)}</strong><span>${escapeHTML(m.text||"A little gift ♡")}</span></div><div class="message-meta">${m.time||"刚刚"}</div></div>`;
     }
-  } catch (error) {
-    message.textContent = "Incorrect password. Try again. ♡";
-  }
+    return `<div class="message ${m.mine?'mine':'theirs'}">
+      <div class="bubble">${m.quote?`<div class="quote-preview">↳ ${escapeHTML(m.quote)}</div>`:""}${escapeHTML(m.text)}</div>
+      <div class="message-meta"><span>${m.time||"刚刚"}</span><button onclick="setReply(${i})">引用回复</button></div>
+    </div>`;
+  }).join("");
+  box.scrollTop=box.scrollHeight;
 }
-</script>
+function sendMessage(){
+  const input=document.getElementById("messageInput");
+  const text=input.value.trim();
+  if(!text||!currentContact)return;
+  currentContact.messages.push({mine:true,text,time:"刚刚",quote:replyTarget?replyTarget.text:""});
+  currentContact.status=text;
+  input.value=""; cancelReply(); save(); renderMessages();
+}
+function setReply(index){
+  replyTarget=currentContact.messages[index];
+  document.getElementById("replyText").textContent="引用："+(replyTarget.text||"转账");
+  document.getElementById("replyBar").classList.add("show");
+  document.getElementById("messageInput").focus();
+}
+function cancelReply(){
+  replyTarget=null;
+  document.getElementById("replyBar").classList.remove("show");
+}
+function sendQuickSymbol(){
+  document.getElementById("messageInput").value+="♡";
+  document.getElementById("messageInput").focus();
+}
+function contactOptions(){
+  if(!currentContact)return;
+  showModal(`<h3>联系人设置</h3>
+    <p class="small-muted">为 ${escapeHTML(currentContact.name)} 设置专属信息</p>
+    <input id="remarkInput" value="${escapeAttr(currentContact.remark||currentContact.name)}" placeholder="修改备注">
+    <input id="avatarInput" value="${escapeAttr(currentContact.avatar)}" placeholder="头像符号或文字">
+    <input id="statusInput" value="${escapeAttr(currentContact.status||"")}" placeholder="个性签名">
+    <div class="modal-actions">
+      <button onclick="closeModal()">取消</button>
+      <button class="confirm" onclick="saveContactOptions()">保存</button>
+    </div>
+    <div style="margin-top:13px;text-align:right"><button class="secondary-btn" onclick="togglePin()"> ${currentContact.pinned?'取消置顶':'置顶联系人'} </button></div>`);
+}
+function saveContactOptions(){
+  currentContact.remark=document.getElementById("remarkInput").value.trim()||currentContact.name;
+  currentContact.avatar=document.getElementById("avatarInput").value.trim()||"♡";
+  currentContact.status=document.getElementById("statusInput").value.trim();
+  document.getElementById("chatName").textContent=currentContact.remark;
+  document.getElementById("chatAvatar").textContent=currentContact.avatar;
+  document.getElementById("chatStatus").textContent=currentContact.status;
+  save(); closeModal(); renderAll(); toast("联系人资料已更新");
+}
+function togglePin(){
+  currentContact.pinned=!currentContact.pinned;
+  save(); closeModal(); renderAll();
+  toast(currentContact.pinned?"已置顶联系人":"已取消置顶");
+}
+function addContact(){
+  showModal(`<h3>添加联系人</h3>
+    <input id="newName" placeholder="联系人名称">
+    <input id="newAvatar" placeholder="头像符号，例如 ♡" value="♡">
+    <div class="modal-actions"><button onclick="closeModal()">取消</button><button class="confirm" onclick="saveNewContact()">添加</button></div>`);
+}
+function saveNewContact(){
+  const name=document.getElementById("newName").value.trim();
+  const avatar=document.getElementById("newAvatar").value.trim()||"♡";
+  if(!name){toast("先填写联系人名称");return;}
+  data.contacts.push({id:Date.now(),name,remark:name,avatar,pinned:false,status:"暂无消息",messages:[]});
+  save();closeModal();renderAll();toast("联系人已添加");
+}
 
+/* 音乐设置 */
+function editMusic(){
+  showModal(`<h3>♫ Music Player</h3>
+    <input id="editSongTitle" value="${escapeAttr(data.song.title)}" placeholder="歌曲名称">
+    <input id="editSongArtist" value="${escapeAttr(data.song.artist)}" placeholder="歌手 / 副标题">
+    <textarea id="editSongLyric" placeholder="歌词">${escapeHTML(data.song.lyric)}</textarea>
+    <div class="modal-actions"><button onclick="closeModal()">取消</button><button class="confirm" onclick="saveMusic()">保存</button></div>`);
+}
+function saveMusic(){
+  data.song={
+    title:document.getElementById("editSongTitle").value.trim()||"Untitled",
+    artist:document.getElementById("editSongArtist").value.trim(),
+    lyric:document.getElementById("editSongLyric").value.trim()
+  };
+  save();closeModal();renderAll();toast("播放器内容已更新");
+}
+function togglePlay(){
+  const b=document.getElementById("playBtn");
+  b.textContent=b.textContent==="▶"?"❚❚":"▶";
+}
+
+/* 钱包与虚拟转账 */
+function openWallet(){
+  showModal(`<h3>♡ Virtual Wallet</h3>
+    <div class="wallet-card"><div class="currency">AVAILABLE BALANCE · USD</div><div class="balance">$${Number(data.balance).toFixed(2)}</div><span class="small-muted">A little virtual gift for us</span></div>
+    <button class="secondary-btn" onclick="showTransactions()">查看交易记录</button>
+    <div class="modal-actions"><button class="confirm" onclick="closeModal()">关闭</button></div>`);
+}
+function openTransfer(){
+  if(!currentContact)return;
+  showModal(`<h3>＄ Send a little gift</h3>
+    <p class="small-muted">发送给 ${escapeHTML(currentContact.remark||currentContact.name)}</p>
+    <input id="transferAmount" type="number" min="0.01" step="0.01" placeholder="金额（USD）">
+    <input id="transferNote" placeholder="转账备注，例如：给你的奶茶钱 ♡">
+    <div class="small-muted">当前虚拟余额：$${Number(data.balance).toFixed(2)}</div>
+    <div class="modal-actions"><button onclick="closeModal()">取消</button><button class="confirm" onclick="sendTransfer()">确认转账</button></div>`);
+}
+function sendTransfer(){
+  const amount=Number(document.getElementById("transferAmount").value);
+  const note=document.getElementById("transferNote").value.trim()||"A little gift ♡";
+  if(!amount||amount<=0){toast("请输入有效金额");return;}
+  if(amount>data.balance){toast("虚拟余额不足");return;}
+  data.balance-=amount;
+  currentContact.messages.push({mine:true,transfer:true,amount,text:note,time:"刚刚"});
+  currentContact.status="转账给你 $"+amount.toFixed(2);
+  data.transactions.unshift({amount:-amount,note,to:currentContact.remark||currentContact.name,time:new Date().toLocaleString()});
+  save();closeModal();renderMessages();toast("虚拟转账成功 ♡");
+}
+function showTransactions(){
+  const list=data.transactions.length?data.transactions.map(t=>`<div class="menu-row glass"><span>${escapeHTML(t.to||"Wallet")}<br><small class="small-muted">${escapeHTML(t.note)} · ${escapeHTML(t.time)}</small></span><strong style="color:#7d8d97">$${Number(t.amount).toFixed(2)}</strong></div>`).join(""):'<div class="empty">还没有交易记录 ♡</div>';
+  showModal(`<h3>Transaction History</h3>${list}<div class="modal-actions"><button class="confirm" onclick="openWallet()">返回钱包</button></div>`);
+}
+
+/* 动态 */
+function publishPost(){
+  const input=document.getElementById("postInput");
+  const text=input.value.trim();
+  if(!text){toast("写一点内容再发布吧");return;}
+  data.posts.unshift({text,time:"刚刚",liked:false});
+  input.value="";save();renderPosts();toast("发布成功 ♡");
+}
+function renderPosts(){
+  const el=document.getElementById("postList");
+  if(!el)return;
+  el.innerHTML=data.posts.length?data.posts.map((p,i)=>`
+    <div class="post-card glass">
+      <div class="post-user"><div class="avatar">♡</div><div><strong>Our Little Space</strong><div class="small-muted">${escapeHTML(p.time)}</div></div></div>
+      <div class="post-text">${escapeHTML(p.text)}</div>
+      <div class="post-actions"><button onclick="likePost(${i})">${p.liked?'♥':'♡'} Like</button><span>⁺₊⋆</span></div>
+    </div>`).join(""):'<div class="empty">还没有动态，留下第一条记录吧 ♡</div>';
+}
+function likePost(i){data.posts[i].liked=!data.posts[i].liked;save();renderPosts();}
+function editProfile(){
+  showModal(`<h3>Edit Profile</h3><p class="small-muted">个人资料编辑入口</p><input id="profileName" placeholder="昵称" value="Our Little Space"><input id="profileSign" placeholder="个性签名" value="just a little world for two · ♡"><div class="modal-actions"><button onclick="closeModal()">关闭</button><button class="confirm" onclick="toast('资料设置已保存');closeModal()">保存</button></div>`);
+}
+
+/* 工具 */
+function showModal(html){
+  document.getElementById("modalContent").innerHTML=html;
+  document.getElementById("modal").classList.add("show");
+}
+function closeModal(){document.getElementById("modal").classList.remove("show");}
+function escapeHTML(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(s){return escapeHTML(s);}
+renderAll();
+</script>
 </body>
 </html>

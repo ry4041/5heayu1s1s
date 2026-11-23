@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -260,31 +259,39 @@ button{color:inherit;cursor:pointer}
 <div class="toast" id="toast"></div>
 
 <div id="lockScreen">
-  <div class="lock-top"><span>‹</span><span id="lockClock">♡</span></div>
+  <div class="lock-top"><span>♡</span><span id="lockClock">♡</span></div>
   <div class="lock-inner">
     <div class="lock-icon">▣</div>
-    <h1 class="lock-title" id="lockTitle">设置密码</h1>
-    <div class="lock-subtitle" id="lockSubtitle">设置一个只属于你的六位数字密码</div>
+    <h1 class="lock-title" id="lockTitle">验证初始化口令</h1>
+    <div class="lock-subtitle" id="lockSubtitle">首次使用需要验证主人身份</div>
     <div class="lock-dots" id="lockDots">
       <span class="lock-dot"></span><span class="lock-dot"></span><span class="lock-dot"></span>
       <span class="lock-dot"></span><span class="lock-dot"></span><span class="lock-dot"></span>
     </div>
-    <div class="lock-hint" id="lockHint">请牢记这个密码，它不会显示给任何人</div>
+    <div class="lock-hint" id="lockHint">请输入初始化口令</div>
     <div class="keypad">
       <button class="key" onclick="pressKey('1')">1</button><button class="key" onclick="pressKey('2')">2<small>ABC</small></button><button class="key" onclick="pressKey('3')">3<small>DEF</small></button>
       <button class="key" onclick="pressKey('4')">4<small>GHI</small></button><button class="key" onclick="pressKey('5')">5<small>JKL</small></button><button class="key" onclick="pressKey('6')">6<small>MNO</small></button>
       <button class="key" onclick="pressKey('7')">7<small>PQRS</small></button><button class="key" onclick="pressKey('8')">8<small>TUV</small></button><button class="key" onclick="pressKey('9')">9<small>WXYZ</small></button>
       <button class="key blank" tabindex="-1"></button><button class="key" onclick="pressKey('0')">0</button><button class="key delete" onclick="deleteKey()" aria-label="删除">⌫</button>
     </div>
-    <div class="lock-bottom"><button id="lockLeft" onclick="lockLeftAction()">取消</button><button id="lockRight" onclick="lockRightAction()">清空</button></div>
+    <div class="lock-bottom"><button id="lockLeft" onclick="lockLeftAction()"></button><button id="lockRight" onclick="lockRightAction()">清空</button></div>
   </div>
 </div>
 
 <script>
 const STORAGE="our_little_space_v3";
-const LOCK_KEY="our_little_space_lock_v1";
+const LOCK_KEY="our_little_space_lock_v2";
 const MY_AVATAR="./IMG_6223.jpeg";
 const HIS_AVATAR="./IMG_6224.jpeg";
+
+/*
+  首次初始化口令：
+  请在正式使用前修改成你自己的六位数字。
+  设置完成后，网页会把密码哈希保存在当前浏览器。
+  注意：口令写在前端源码中，不能抵御能查看源码的人。
+*/
+const OWNER_SETUP_CODE="846219";
 
 const defaultData={
  profile:{name:"Our Little Space",sign:"just a little world for two · ♡"},
@@ -336,8 +343,15 @@ function normalizeMessageTimes(){
  save();
 }
 function save(){
- localStorage.setItem(STORAGE,JSON.stringify(data));
- updateBalance();
+ try{
+  localStorage.setItem(STORAGE,JSON.stringify(data));
+  updateBalance();
+  return true;
+ }catch(e){
+  console.error("Data save failed:",e);
+  toast("保存失败：请检查浏览器存储空间或权限");
+  return false;
+ }
 }
 function updateBalance(){
  const e=document.getElementById("balance");
@@ -558,8 +572,6 @@ function editProfile(){
  <input id="profileSign" maxlength="100" placeholder="个性签名" value="${escapeAttr(data.profile.sign||"")}">
  <div class="modal-actions"><button onclick="closeModal()">关闭</button><button class="confirm" onclick="saveProfile()">保存</button></div>`);
 }
-
-/* 修正资料保存：先更新内存数据，再写入本地存储，成功后刷新界面 */
 function saveProfile(){
  const nameInput=document.getElementById("profileName");
  const signInput=document.getElementById("profileSign");
@@ -572,14 +584,11 @@ function saveProfile(){
  const previous={...data.profile};
 
  try{
-  data.profile=next;
-  const serialized=JSON.stringify(data);
+  const serialized=JSON.stringify({...data,profile:next});
   localStorage.setItem(STORAGE,serialized);
-
-  /* 只检查写入是否成功，不再进行容易误判的二次字段校验 */
   const stored=localStorage.getItem(STORAGE);
-  if(!stored)throw new Error("Storage write returned empty");
-
+  if(!stored||JSON.parse(stored).profile?.name!==next.name)throw new Error("Profile write verification failed");
+  data.profile=next;
   renderProfile();
   closeModal();
   toast("个人资料已更新 ♡");
@@ -598,97 +607,231 @@ function closeModal(){
  document.getElementById("modal").classList.remove("show");
 }
 
-/* 密码锁：PBKDF2 + 随机 salt，只在本机浏览器保存派生哈希，不保存明文密码 */
-let lockInput="",lockMode="setup",firstPassword="";
+/* ==================== 密码锁系统 ==================== */
+
+let lockInput="";
+let lockMode="claim";
+let firstPassword="";
+let lockBusy=false;
+
 const enc=new TextEncoder();
 
 function bytesToHex(bytes){
  return Array.from(new Uint8Array(bytes)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
-function randomSalt(){
- const a=new Uint8Array(16);crypto.getRandomValues(a);return bytesToHex(a);
+function hexToBytes(hex){
+ if(typeof hex!=="string"||hex.length%2!==0||!/^[0-9a-f]+$/i.test(hex))throw new Error("Invalid salt");
+ return new Uint8Array(hex.match(/.{2}/g).map(x=>parseInt(x,16)));
 }
+function randomSalt(){
+ const a=new Uint8Array(16);
+ if(window.crypto&&crypto.getRandomValues){
+  crypto.getRandomValues(a);
+ }else{
+  for(let i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*256);
+ }
+ return bytesToHex(a);
+}
+
+/*
+  优先使用 Web Crypto PBKDF2。
+  如果 file:// 等环境不支持 subtle，则使用兼容性回退算法。
+  回退算法用于兼容性，不等同于服务器端安全认证。
+*/
 async function hashPassword(password,saltHex){
- const salt=new Uint8Array(saltHex.match(/.{2}/g).map(x=>parseInt(x,16)));
- const key=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);
- const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:180000,hash:"SHA-256"},key,256);
- return bytesToHex(bits);
+ const salt=hexToBytes(saltHex);
+
+ if(window.crypto&&crypto.subtle){
+  try{
+   const key=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);
+   const bits=await crypto.subtle.deriveBits(
+    {name:"PBKDF2",salt,iterations:180000,hash:"SHA-256"},
+    key,256
+   );
+   return "pbkdf2:"+bytesToHex(bits);
+  }catch(e){
+   console.warn("Web Crypto unavailable; using compatibility hash.",e);
+  }
+ }
+
+ /* 兼容模式：本地混合哈希。请勿将其视为服务器级密码保护。 */
+ let state=2166136261;
+ const input=password+"|"+saltHex;
+ for(let round=0;round<120000;round++){
+  const source=input+"|"+round;
+  for(let i=0;i<source.length;i++){
+   state^=source.charCodeAt(i);
+   state=Math.imul(state,16777619);
+   state^=state>>>13;
+  }
+ }
+ let out="";
+ for(let i=0;i<8;i++){
+  state^=state>>>16;
+  state=Math.imul(state,2246822507);
+  state^=state>>>13;
+  out+=(state>>>0).toString(16).padStart(8,"0");
+ }
+ return "fallback:"+out;
 }
 function lockRecord(){
- try{return JSON.parse(localStorage.getItem(LOCK_KEY)||"null")}catch(e){return null}
+ try{
+  const record=JSON.parse(localStorage.getItem(LOCK_KEY)||"null");
+  if(!record||typeof record!=="object")return null;
+  if(typeof record.salt!=="string"||typeof record.hash!=="string")return null;
+  return record;
+ }catch(e){return null}
+}
+function hasLegacyLock(){
+ try{
+  return !!localStorage.getItem("our_little_space_lock_v1");
+ }catch(e){return false}
+}
+function updateLockDots(){
+ document.querySelectorAll(".lock-dot").forEach((d,i)=>d.classList.toggle("filled",i<lockInput.length));
 }
 function setLockMode(mode){
- lockMode=mode;lockInput="";updateLockDots();
+ lockMode=mode;
+ lockInput="";
+ updateLockDots();
+
  const title=document.getElementById("lockTitle");
  const sub=document.getElementById("lockSubtitle");
  const hint=document.getElementById("lockHint");
  const left=document.getElementById("lockLeft");
  const right=document.getElementById("lockRight");
 
- if(mode==="setup"){
-  title.textContent="设置密码";
-  sub.textContent="设置一个只属于你的六位数字密码";
-  hint.textContent="请牢记这个密码，它不会显示给任何人";
-  left.textContent="";right.textContent="清空";
+ if(mode==="claim"){
+  title.textContent="验证初始化口令";
+  sub.textContent="首次使用需要验证主人身份";
+  hint.textContent="请输入网页所有者的初始化口令";
+  left.textContent="";
+  right.textContent="清空";
+ }else if(mode==="setup"){
+  title.textContent="设置专属密码";
+  sub.textContent="请设置一个只有你知道的六位数字密码";
+  hint.textContent="请牢记密码，设置完成后无法从页面重置";
+  left.textContent="";
+  right.textContent="清空";
  }else if(mode==="confirm"){
   title.textContent="确认密码";
   sub.textContent="请再次输入刚刚设置的密码";
-  hint.textContent="再次输入六位数字以完成设置";
-  left.textContent="返回";right.textContent="清空";
+  hint.textContent="两次输入一致后即完成初始化";
+  left.textContent="返回";
+  right.textContent="清空";
  }else{
   title.textContent="输入密码";
-  sub.textContent="输入密码，回到我们的小手机";
-  hint.textContent="";
-  left.textContent="忘记密码？";right.textContent="清空";
+  sub.textContent="验证成功后才能进入小手机";
+  hint.textContent="此设备已完成初始化";
+  left.textContent="";
+  right.textContent="清空";
  }
 }
-function updateLockDots(){
- document.querySelectorAll(".lock-dot").forEach((d,i)=>d.classList.toggle("filled",i<lockInput.length));
-}
 function pressKey(n){
- if(lockInput.length>=6)return;
- lockInput+=n;updateLockDots();
- if(lockInput.length===6)setTimeout(processLockInput,130);
+ if(lockBusy||lockInput.length>=6)return;
+ lockInput+=n;
+ updateLockDots();
+ if(lockInput.length===6){
+  lockBusy=true;
+  setTimeout(async()=>{
+   try{await processLockInput();}
+   finally{lockBusy=false;}
+  },130);
+ }
 }
 function deleteKey(){
- lockInput=lockInput.slice(0,-1);updateLockDots();
+ if(lockBusy)return;
+ lockInput=lockInput.slice(0,-1);
+ updateLockDots();
 }
 function lockError(message){
  const box=document.querySelector(".lock-inner");
- box.classList.remove("lock-error");void box.offsetWidth;box.classList.add("lock-error");
+ box.classList.remove("lock-error");
+ void box.offsetWidth;
+ box.classList.add("lock-error");
  document.getElementById("lockHint").textContent=message;
- lockInput="";updateLockDots();
+ lockInput="";
+ updateLockDots();
+}
+function constantTimeEqual(a,b){
+ if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;
+ let result=0;
+ for(let i=0;i<a.length;i++)result|=a.charCodeAt(i)^b.charCodeAt(i);
+ return result===0;
 }
 async function processLockInput(){
  const entered=lockInput;
- lockInput="";updateLockDots();
+ lockInput="";
+ updateLockDots();
+
+ if(lockMode==="claim"){
+  if(!constantTimeEqual(entered,OWNER_SETUP_CODE)){
+   lockError("初始化口令不正确，无法创建密码");
+   return;
+  }
+  setLockMode("setup");
+  document.getElementById("lockHint").textContent="身份验证通过，请设置你的六位数字密码";
+  return;
+ }
 
  if(lockMode==="setup"){
-  firstPassword=entered;setLockMode("confirm");return;
+  firstPassword=entered;
+  setLockMode("confirm");
+  return;
  }
+
  if(lockMode==="confirm"){
   if(entered!==firstPassword){
-   firstPassword="";setLockMode("setup");
-   lockError("两次密码不一致，请重新设置");return;
+   firstPassword="";
+   setLockMode("setup");
+   lockError("两次密码不一致，请重新设置");
+   return;
   }
+
   try{
    const salt=randomSalt();
    const hash=await hashPassword(entered,salt);
-   localStorage.setItem(LOCK_KEY,JSON.stringify({salt,hash,version:1}));
+   const record={
+    salt,
+    hash,
+    version:2,
+    createdAt:Date.now()
+   };
+
+   localStorage.setItem(LOCK_KEY,JSON.stringify(record));
+
+   const verify=lockRecord();
+   if(!verify||verify.hash!==hash||verify.salt!==salt){
+    throw new Error("Password record verification failed");
+   }
+
+   firstPassword="";
    unlockApp();
   }catch(e){
-   lockError("当前浏览器无法创建安全密码，请使用 HTTPS 网站打开");
+   console.error("Password setup failed:",e);
+   lockError("密码保存失败，请检查浏览器存储权限");
   }
   return;
  }
- const record=lockRecord();
- if(!record){setLockMode("setup");return}
- try{
-  const hash=await hashPassword(entered,record.salt);
-  if(hash===record.hash)unlockApp();
-  else lockError("密码不正确，请再试一次");
- }catch(e){
-  lockError("密码验证失败，请刷新页面重试");
+
+ if(lockMode==="unlock"){
+  const record=lockRecord();
+  if(!record){
+   lockError("密码记录不存在，请检查浏览器数据是否被清除");
+   return;
+  }
+
+  try{
+   const hash=await hashPassword(entered,record.salt);
+   if(constantTimeEqual(hash,record.hash)){
+    unlockApp();
+   }else{
+    lockError("密码不正确，请再试一次");
+   }
+  }catch(e){
+   console.error("Password verification failed:",e);
+   lockError("密码验证失败，请重新输入");
+  }
  }
 }
 function unlockApp(){
@@ -702,17 +845,22 @@ function lockNow(){
 }
 function lockLeftAction(){
  if(lockMode==="confirm"){
-  firstPassword="";setLockMode("setup");
- }else if(lockMode==="unlock"){
-  if(confirm("忘记密码后需要清除此网站的密码设置，之后可重新设置。要继续吗？")){
-   localStorage.removeItem(LOCK_KEY);
-   firstPassword="";setLockMode("setup");
-  }
+  firstPassword="";
+  setLockMode("setup");
+  document.getElementById("lockHint").textContent="请重新设置六位数字密码";
  }
 }
 function lockRightAction(){
- lockInput="";updateLockDots();
- document.getElementById("lockHint").textContent=lockMode==="unlock"?"":"请继续输入六位数字";
+ if(lockBusy)return;
+ lockInput="";
+ updateLockDots();
+ if(lockMode==="unlock"){
+  document.getElementById("lockHint").textContent="此设备已完成初始化";
+ }else if(lockMode==="claim"){
+  document.getElementById("lockHint").textContent="请输入初始化口令";
+ }else{
+  document.getElementById("lockHint").textContent="请继续输入六位数字";
+ }
 }
 function updateLockClock(){
  document.getElementById("lockClock").textContent=getBeijingTime();
@@ -721,14 +869,36 @@ function initLock(){
  document.getElementById("app").style.visibility="hidden";
  updateLockClock();
  setInterval(updateLockClock,15000);
- setLockMode(lockRecord()?"unlock":"setup");
+
+ const existing=lockRecord();
+
+ if(existing){
+  /* 已经设置过密码：只允许解锁，不再开放设置或重置 */
+  setLockMode("unlock");
+ }else if(hasLegacyLock()){
+  /*
+    检测到旧版本密码记录时，不允许直接创建新密码。
+    请先使用旧版页面解锁并备份数据，再迁移到新版本。
+  */
+  setLockMode("claim");
+  document.getElementById("lockHint").textContent="检测到旧版密码记录。请勿清除浏览器数据，以免丢失原有密码保护。";
+ }else{
+  setLockMode("claim");
+ }
 }
+
 document.addEventListener("keydown",e=>{
  if(document.getElementById("lockScreen").classList.contains("hidden"))return;
- if(/^\d$/.test(e.key))pressKey(e.key);
- else if(e.key==="Backspace")deleteKey();
+ if(/^\d$/.test(e.key)){
+  e.preventDefault();
+  pressKey(e.key);
+ }else if(e.key==="Backspace"){
+  e.preventDefault();
+  deleteKey();
+ }
 });
 
+/* 初始化页面 */
 normalizeMessageTimes();
 renderAll();
 initLock();

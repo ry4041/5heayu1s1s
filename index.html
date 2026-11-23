@@ -529,7 +529,7 @@ button{color:inherit;cursor:pointer}
   padding:5px 12px;
 }
 
-/* 消息布局：加大头像 */
+/* 消息布局 */
 
 .message{
   max-width:94%;
@@ -548,7 +548,7 @@ button{color:inherit;cursor:pointer}
   align-self:flex-start;
 }
 
-/* 聊天头像：58px，圆形 */
+/* 聊天头像 */
 
 .message-avatar{
   width:58px;
@@ -983,11 +983,13 @@ button{color:inherit;cursor:pointer}
 <script>
 const STORAGE="our_little_space_v3";
 
-/* 图片统一管理：三个文件必须和 index.html 放在同一个文件夹 */
+/* 图片统一管理 */
 
 const MY_AVATAR="./IMG_6223.jpeg";
 const HIS_AVATAR="./IMG_6224.jpeg";
 const WALLPAPER="./IMG_6226.jpeg";
+
+/* 默认数据 */
 
 const defaultData={
   contacts:[
@@ -1049,6 +1051,68 @@ try{
 
 }catch(e){
   data=JSON.parse(JSON.stringify(defaultData));
+}
+
+/* =====================================
+   北京时间系统
+   所有新消息自动记录发送时的北京时间
+===================================== */
+
+/* 获取当前北京时间 */
+
+function getBeijingTime(timestamp=Date.now()){
+  return new Intl.DateTimeFormat("zh-CN",{
+    timeZone:"Asia/Shanghai",
+    hour:"2-digit",
+    minute:"2-digit",
+    hourCycle:"h23"
+  }).format(new Date(timestamp));
+}
+
+/* 获取完整北京时间 */
+
+function getBeijingDateTime(timestamp=Date.now()){
+  return new Intl.DateTimeFormat("zh-CN",{
+    timeZone:"Asia/Shanghai",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit",
+    hour:"2-digit",
+    minute:"2-digit",
+    second:"2-digit",
+    hourCycle:"h23"
+  }).format(new Date(timestamp));
+}
+
+/* 获取消息显示时间 */
+
+function getMessageTime(message){
+  if(message.timestamp){
+    return getBeijingTime(message.timestamp);
+  }
+
+  return message.time||getBeijingTime();
+}
+
+/* 旧消息兼容：
+   将原本的“刚刚”转换为实际北京时间 */
+
+function normalizeMessageTimes(){
+  data.contacts.forEach(contact=>{
+    if(!Array.isArray(contact.messages))return;
+
+    contact.messages.forEach(message=>{
+      if(
+        !message.timestamp&&
+        (!message.time||message.time==="刚刚")
+      ){
+        message.timestamp=Date.now();
+        message.time=getBeijingTime(message.timestamp);
+      }
+    });
+  });
+
+  save();
 }
 
 let currentContact=null;
@@ -1113,7 +1177,6 @@ function avatarMarkup(src,fallback="♡",extraClass=""){
 /* 获取联系人头像 */
 
 function getContactAvatar(c){
-
   if(
     String(c.name||"").trim()==="阿屿"||
     String(c.remark||"").trim()==="阿屿"
@@ -1248,6 +1311,8 @@ function closeChat(){
   renderAll();
 }
 
+/* 消息渲染 */
+
 function renderMessages(){
   const box=document.getElementById("chatMessages");
   if(!currentContact)return;
@@ -1269,6 +1334,8 @@ function renderMessages(){
 
       const avatar=avatarMarkup(src,fallback,"message-avatar");
 
+      const messageTime=getMessageTime(m);
+
       const content=m.transfer
         ?`
           <div class="transfer-bubble">
@@ -1276,7 +1343,9 @@ function renderMessages(){
             <strong>$${Number(m.amount).toFixed(2)}</strong>
             <span>${escapeHTML(m.text||"A little gift ♡")}</span>
           </div>
-          <div class="message-meta">${escapeHTML(m.time||"刚刚")}</div>
+          <div class="message-meta">
+            <span>${escapeHTML(messageTime)}</span>
+          </div>
         `
         :`
           <div class="bubble">
@@ -1286,7 +1355,7 @@ function renderMessages(){
             ${escapeHTML(m.text)}
           </div>
           <div class="message-meta">
-            <span>${escapeHTML(m.time||"刚刚")}</span>
+            <span>${escapeHTML(messageTime)}</span>
             <button
               onclick="setReply(${i})"
               aria-label="引用回复"
@@ -1307,16 +1376,21 @@ function renderMessages(){
   box.scrollTop=box.scrollHeight;
 }
 
+/* 发送消息 */
+
 function sendMessage(){
   const input=document.getElementById("messageInput");
   const text=input.value.trim();
 
   if(!text||!currentContact)return;
 
+  const now=Date.now();
+
   currentContact.messages.push({
     mine:true,
     text,
-    time:"刚刚",
+    timestamp:now,
+    time:getBeijingTime(now),
     quote:replyTarget?replyTarget.text:""
   });
 
@@ -1328,6 +1402,8 @@ function sendMessage(){
   renderMessages();
   renderAll();
 }
+
+/* 引用回复 */
 
 function setReply(index){
   replyTarget=currentContact.messages[index];
@@ -1573,12 +1649,15 @@ function sendTransfer(){
 
   data.balance-=amount;
 
+  const now=Date.now();
+
   currentContact.messages.push({
     mine:true,
     transfer:true,
     amount,
     text:note,
-    time:"刚刚"
+    timestamp:now,
+    time:getBeijingTime(now)
   });
 
   currentContact.status="转账给你 $"+amount.toFixed(2);
@@ -1587,7 +1666,7 @@ function sendTransfer(){
     amount:-amount,
     note,
     to:currentContact.remark||currentContact.name,
-    time:new Date().toLocaleString()
+    time:getBeijingDateTime(now)
   });
 
   save();
@@ -1636,7 +1715,7 @@ function publishPost(){
 
   data.posts.unshift({
     text,
-    time:"刚刚",
+    time:getBeijingTime(),
     liked:false
   });
 
@@ -1710,7 +1789,9 @@ function closeModal(){
 
 /* 启动 */
 
+normalizeMessageTimes();
 renderAll();
+
 </script>
 
 </body>

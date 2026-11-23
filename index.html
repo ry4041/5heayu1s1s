@@ -219,7 +219,7 @@ button{color:inherit;cursor:pointer}
   margin:19px 5px 10px;
 }
 
-/* 头像：统一圆形 */
+/* 统一圆形头像 */
 
 .avatar{
   width:48px;
@@ -509,13 +509,15 @@ button{color:inherit;cursor:pointer}
   color:#87939a;
 }
 
+/* 聊天消息列表 */
+
 .chat-messages{
   flex:1;
   overflow-y:auto;
   padding:17px 13px 22px;
   display:flex;
   flex-direction:column;
-  gap:13px;
+  gap:18px;
 }
 
 .date-divider{
@@ -527,12 +529,14 @@ button{color:inherit;cursor:pointer}
   padding:5px 12px;
 }
 
+/* 消息布局：加大头像 */
+
 .message{
-  max-width:92%;
+  max-width:94%;
   display:flex;
   flex-direction:row;
-  gap:7px;
-  align-items:flex-end;
+  gap:10px;
+  align-items:center;
 }
 
 .message.mine{
@@ -540,31 +544,43 @@ button{color:inherit;cursor:pointer}
   flex-direction:row-reverse;
 }
 
-.message.theirs{align-self:flex-start}
+.message.theirs{
+  align-self:flex-start;
+}
+
+/* 聊天头像：58px，圆形 */
 
 .message-avatar{
-  width:30px;
-  height:30px;
-  font-size:13px;
-  margin-bottom:3px;
+  width:58px;
+  height:58px;
+  min-width:58px;
+  min-height:58px;
+  border-radius:50%;
+  flex-shrink:0;
+  font-size:20px;
+  margin-bottom:0;
+  border:3px solid rgba(255,255,255,.96);
+  box-shadow:0 4px 13px rgba(125,140,150,.16);
 }
 
 .message-content{
   display:flex;
   flex-direction:column;
-  gap:5px;
-  max-width:calc(100% - 37px);
+  gap:6px;
+  max-width:calc(100% - 68px);
   min-width:0;
 }
 
 .message.mine .message-content{align-items:flex-end}
 .message.theirs .message-content{align-items:flex-start}
 
+/* 消息气泡 */
+
 .bubble{
-  padding:11px 14px;
-  border-radius:17px;
-  font-size:14px;
-  line-height:1.65;
+  padding:12px 16px;
+  border-radius:19px;
+  font-size:15px;
+  line-height:1.7;
   background:rgba(255,255,255,.85);
   border:1px solid rgba(255,255,255,.95);
   box-shadow:0 4px 12px #8797a111;
@@ -572,7 +588,11 @@ button{color:inherit;cursor:pointer}
   overflow-wrap:anywhere;
 }
 
-.mine .bubble{background:rgba(215,225,232,.88)}
+.mine .bubble{
+  background:rgba(215,225,232,.88);
+}
+
+/* 引用消息预览 */
 
 .quote-preview{
   border-left:3px solid #9eafb9;
@@ -583,6 +603,8 @@ button{color:inherit;cursor:pointer}
   background:#e9eef1aa;
   border-radius:4px;
 }
+
+/* 时间和引用按钮 */
 
 .message-meta{
   color:#aab2b7;
@@ -596,9 +618,13 @@ button{color:inherit;cursor:pointer}
   border:0;
   background:transparent;
   color:#9aa7af;
-  padding:0;
-  font-size:10px;
+  padding:2px 5px;
+  font-size:19px;
+  line-height:1;
+  cursor:pointer;
 }
+
+/* 转账气泡 */
 
 .transfer-bubble{
   width:220px;
@@ -617,6 +643,8 @@ button{color:inherit;cursor:pointer}
 
 .transfer-bubble span{font-size:11px;color:#9aa6ad}
 
+/* 引用回复栏 */
+
 .reply-bar{
   display:none;
   padding:9px 15px;
@@ -627,6 +655,8 @@ button{color:inherit;cursor:pointer}
 
 .reply-bar.show{display:flex;justify-content:space-between}
 .reply-bar button{border:0;background:transparent}
+
+/* 输入框 */
 
 .chat-composer{
   padding:10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -734,6 +764,8 @@ button{color:inherit;cursor:pointer}
 
 .modal-actions .confirm{background:#667985;color:white}
 
+/* 提示 */
+
 .toast{
   position:fixed;
   z-index:90;
@@ -752,9 +784,29 @@ button{color:inherit;cursor:pointer}
 
 .toast.show{opacity:1}
 
+/* 手机屏幕适配 */
+
 @media(max-width:380px){
-  .page{padding-left:15px;padding-right:15px}
-  .message{max-width:96%}
+  .page{
+    padding-left:15px;
+    padding-right:15px;
+  }
+
+  .message{
+    max-width:98%;
+    gap:8px;
+  }
+
+  .message-avatar{
+    width:52px;
+    height:52px;
+    min-width:52px;
+    min-height:52px;
+  }
+
+  .message-content{
+    max-width:calc(100% - 60px);
+  }
 }
 </style>
 </head>
@@ -1035,12 +1087,7 @@ function escapeAttr(s){
   return escapeHTML(s);
 }
 
-/*
-  头像核心修复：
-  图片和备用爱心同时存在。
-  图片加载失败时，自动显示备用内容。
-  所有头像都使用圆形裁切。
-*/
+/* 头像管理 */
 
 function avatarMarkup(src,fallback="♡",extraClass=""){
   const safeSrc=src?escapeAttr(src):"";
@@ -1066,11 +1113,6 @@ function avatarMarkup(src,fallback="♡",extraClass=""){
 /* 获取联系人头像 */
 
 function getContactAvatar(c){
-
-  /*
-    阿屿始终优先使用 IMG_6224.jpeg。
-    避免旧 localStorage 中的错误路径覆盖新头像。
-  */
 
   if(
     String(c.name||"").trim()==="阿屿"||
@@ -1245,7 +1287,11 @@ function renderMessages(){
           </div>
           <div class="message-meta">
             <span>${escapeHTML(m.time||"刚刚")}</span>
-            <button onclick="setReply(${i})">引用回复</button>
+            <button
+              onclick="setReply(${i})"
+              aria-label="引用回复"
+              title="引用回复"
+            >⤷</button>
           </div>
         `;
 

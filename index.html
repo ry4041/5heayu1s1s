@@ -121,11 +121,101 @@
     <div class="footer">MADE WITH LOVE ♡</div>
   </main>
 
-  <script>
-    function unlock() {
-      document.getElementById("message").textContent =
-        "Welcome to our little space. ♡";
+
+<script>
+const STORAGE_KEY = "our-little-space-v1";
+
+function toBase64(bytes) {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function fromBase64(text) {
+  return Uint8Array.from(atob(text), c => c.charCodeAt(0));
+}
+
+async function makeKey(password, salt) {
+  const encoder = new TextEncoder();
+  const material = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations: 310000,
+      hash: "SHA-256"
+    },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function unlock() {
+  const input = document.getElementById("password");
+  const message = document.getElementById("message");
+  const password = input.value;
+
+  if (!password) {
+    message.textContent = "Please enter a password.";
+    return;
+  }
+
+  try {
+    let saved = localStorage.getItem(STORAGE_KEY);
+
+    if (!saved) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await makeKey(password, salt);
+
+      const data = new TextEncoder().encode(
+        "Welcome to our little space. ♡"
+      );
+
+      const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        data
+      );
+
+      saved = JSON.stringify({
+        salt: toBase64(salt),
+        iv: toBase64(iv),
+        data: toBase64(new Uint8Array(encrypted))
+      });
+
+      localStorage.setItem(STORAGE_KEY, saved);
+      message.textContent = "Your little space is ready. ♡";
+    } else {
+      const record = JSON.parse(saved);
+      const key = await makeKey(
+        password,
+        fromBase64(record.salt)
+      );
+
+      const decrypted = await crypto.subtle.decrypt(
+        {
+          name: "AES-GCM",
+          iv: fromBase64(record.iv)
+        },
+        key,
+        fromBase64(record.data)
+      );
+
+      message.textContent = new TextDecoder().decode(decrypted);
     }
-  </script>
+  } catch (error) {
+    message.textContent = "Incorrect password. Try again. ♡";
+  }
+}
+</script>
+
 </body>
 </html>
